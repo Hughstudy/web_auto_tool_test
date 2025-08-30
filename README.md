@@ -1,251 +1,252 @@
-# MCP Task Orchestrator - Playwright Integration
+# MCP Task Orchestrator
 
-This project demonstrates how to use **FastMCP** to create an intelligent web automation system powered by **Playwright MCP** and **LLM control** (using DeepSeek Chat).
+An intelligent task automation system that combines Large Language Models (LLMs) with Model Context Protocol (MCP) tools for complex web-based task execution.
 
-## Features
+## 🎯 Overview
 
-- 🎭 **Playwright MCP Integration**: Direct control of web browser automation
-- 🤖 **LLM-Powered Automation**: Use AI to intelligently analyze pages and plan actions
-- 🔧 **FastMCP Framework**: Modern MCP server implementation
-- 🎯 **Multiple Operation Modes**: Basic scripting, LLM control, and interactive demos
-- 📝 **Smart Form Filling**: AI identifies and fills forms automatically
-- 📊 **Data Extraction**: Structured data extraction guided by AI
-- 🔍 **Intelligent Navigation**: Goal-oriented web browsing
+This project demonstrates a clean architecture pattern for building AI agents that can execute complex, multi-step tasks by combining:
+- **OpenAI API** for intelligent reasoning and planning
+- **FastMCP** for connecting to MCP servers
+- **Playwright MCP Server** for web browser automation
+- **Smart orchestration** with progress evaluation and automatic tool execution
 
-## Prerequisites
+## 🏗️ Architecture
 
-1. **Node.js** (for Playwright MCP server)
-2. **Python 3.12+**
-3. **uv** package manager
-4. **OpenAI-compatible API** (configured for DeepSeek)
+```
+┌─────────────┐    ┌──────────────────┐    ┌─────────────┐
+│   main.py   │───▶│ TaskOrchestrator │◀───│ MessageSystem│
+└─────────────┘    └──────────────────┘    └─────────────┘
+                           │
+                    ┌──────┴──────┐
+                    ▼             ▼
+              ┌───────────┐  ┌─────────────┐
+              │ LLMClient │  │  MCPClient  │
+              └───────────┘  └─────────────┘
+                    │              │
+                    ▼              ▼
+            ┌─────────────┐  ┌─────────────┐
+            │ OpenAI API  │  │Playwright   │
+            │             │  │MCP Server   │
+            └─────────────┘  └─────────────┘
+```
 
-## Setup
+## ✨ Features
 
-### 1. Install Dependencies
+- **Smart Task Orchestration**: Automatically breaks down complex tasks into manageable steps
+- **Progress Evaluation**: JSON-based progress assessment with completion detection  
+- **Automatic Tool Calling**: Seamless integration between LLM reasoning and MCP tool execution
+- **Error Resilience**: Retry mechanisms and graceful failure recovery
+- **Clean Architecture**: Separation of concerns with well-defined interfaces
+- **Async Support**: Full async/await support for high performance
+
+## 🚀 Quick Start
+
+### Prerequisites
+
+- Python 3.12+
+- [uv](https://github.com/astral-sh/uv) package manager
+- OpenAI API key (or compatible API)
+- Running Playwright MCP server on `localhost:8931`
+
+### Installation
 
 ```bash
-# Install Python dependencies
+# Clone the repository
+git clone <repository-url>
+cd mcp-task-orchestrator
+
+# Install dependencies
 uv install
-
-# Install Playwright MCP (globally)
-npm install -g @playwright/mcp@latest
 ```
 
-### 2. Environment Configuration
+### Configuration
 
-Create a `.env` file with your AI model configuration:
-
-```env
-OPENAI_API_KEY=your_deepseek_api_key
-OPENAI_BASE_URL=https://api.deepseek.com
-```
-
-### 3. MCP Server Configuration
-
-Add this to your MCP client configuration:
-
-```json
-{
-  "mcpServers": {
-    "playwright": {
-      "command": "npx",
-      "args": ["@playwright/mcp@latest"]
-    }
-  }
-}
-```
-
-## Usage
-
-### Quick Start
-
-### Option 1: Simple Demo (No API Keys Required)
-
-See the concepts in action with simulated Playwright actions:
+Set up your environment variables:
 
 ```bash
-python simple_demo.py
+# Required
+export OPENAI_API_KEY="your-api-key-here"
+
+# Optional - for custom OpenAI-compatible APIs  
+export OPENAI_BASE_URL="https://api.your-provider.com/v1"
 ```
 
-### Option 2: Full Demo (Requires API Setup)
-
-Run demonstrations with real LLM control:
+### Run the Demo
 
 ```bash
-# First set up your API keys in .env file
-cp .env.example .env
-# Edit .env with your DeepSeek API credentials
-
-python main.py demo
+uv run python main.py
 ```
 
-### Available Modes
+The demo will execute a complex task that:
+1. Opens Google.com
+2. Searches for Nvidia's latest earnings call transcript
+3. Reads and analyzes the content
+4. Provides a summary of the Q&A session
 
-1. **Simple Demo** - Works without API keys:
-   ```bash
-   python simple_demo.py
-   ```
+## 📁 Project Structure
 
-2. **Demo Mode** - Full LLM capabilities (requires API setup):
-   ```bash
-   python main.py demo
-   ```
+```
+src/
+├── __init__.py
+├── task_orchestrator.py    # Main orchestration logic
+├── llm_client.py          # OpenAI API integration  
+├── mcp_client.py          # MCP server communication
+└── message_system.py      # Conversation management
 
-3. **Interactive Mode** - Custom tasks:
-   ```bash
-   python main.py interactive
-   ```
+main.py                    # Demo application
+pyproject.toml            # Project configuration
+CLAUDE.md                 # Development guidelines
+```
 
-4. **LLM Server** - Run as MCP server:
-   ```bash
-   python main.py llm
-   ```
+## 🔧 Core Components
 
-5. **Basic Server** - Simple Playwright wrapper:
-   ```bash
-   python main.py basic
-   ```
+### TaskOrchestrator
 
-## Example Capabilities
+The brain of the system that manages task execution:
+- Evaluates progress with JSON-based assessment
+- Coordinates between LLM and MCP clients
+- Implements iterative execution with smart stopping conditions
+- Handles up to 25 iterations with progress tracking
 
-### 🔍 Intelligent Web Search
+### LLMClient
+
+OpenAI API integration with advanced features:
+- Automatic tool calling with retry mechanisms
+- Support for multiple OpenAI-compatible APIs
+- Single-cycle tool execution with follow-up processing
+- Configurable model selection
+
+### MCPClient  
+
+FastMCP wrapper for MCP server communication:
+- Async context manager for clean resource handling
+- Tool discovery and execution capabilities
+- Direct integration with Playwright MCP server
+- Connection testing and health checks
+
+### MessageSystem
+
+Centralized conversation management:
+- OpenAI format conversion and compatibility
+- Tool call tracking and result management
+- Conversation history and summaries
+- Thread-safe message handling
+
+## 🛠️ Available Tools
+
+The system connects to a Playwright MCP server providing 21+ browser automation tools:
+
+| Category | Tools | Description |
+|----------|-------|-------------|
+| **Navigation** | `browser_navigate`, `browser_go_back`, `browser_refresh` | Page navigation |
+| **Interaction** | `browser_click`, `browser_type`, `browser_fill_form` | User interactions |
+| **Content** | `browser_take_screenshot`, `browser_snapshot`, `browser_extract` | Content capture |
+| **Automation** | `browser_wait_for`, `browser_evaluate`, `browser_file_upload` | Advanced automation |
+
+## 🔄 Task Flow
+
+```mermaid
+graph LR
+    A[User Request] --> B[TaskOrchestrator]
+    B --> C[Progress Evaluation]
+    C --> D[Tool Selection]
+    D --> E[LLM with Tools]
+    E --> F[MCP Tool Execution]
+    F --> G[Progress Check]
+    G --> H{Complete?}
+    H -->|No| C
+    H -->|Yes| I[Final Result]
+```
+
+## 📊 Example Task Execution
+
 ```python
-# LLM analyzes Google, performs search, and clicks first result
-await controller.analyze_page_and_act(
-    url="https://www.google.com",
-    goal="Search for 'FastMCP Python library' and click on the first result",
-    context="Looking for FastMCP documentation"
-)
+user_request = """
+1. Open google.com and search for the latest earnings call transcript for Nvidia
+2. Try to find the latest earnings call transcript  
+3. Read the earnings call transcript
+4. Give me a summary of the earnings call transcript QA session
+"""
+
+# The orchestrator handles the complexity:
+result = await orchestrator.execute_task(user_request)
 ```
 
-### 📝 Smart Form Filling
-```python
-# LLM identifies form fields and fills them appropriately
-form_data = {
-    "name": "John Doe",
-    "email": "john@example.com",
-    "subject": "MCP Integration Question"
-}
+The system will:
+- ✅ Navigate to Google
+- ✅ Perform search queries
+- ✅ Click on relevant results
+- ✅ Extract and analyze content
+- ✅ Generate intelligent summaries
+- ✅ Provide progress updates at each step
 
-await controller.intelligent_form_filling(
-    url="https://example.com/contact",
-    form_data=form_data,
-    submit=False
-)
-```
+## 🧪 Development
 
-### 📊 Data Extraction
-```python
-# LLM extracts structured data from any webpage
-await controller.extract_structured_data(
-    url="https://github.com/microsoft/playwright",
-    data_description="Extract repo name, stars, description, and recent commits"
-)
-```
+### Code Style
 
-## How It Works
-
-### 1. **Playwright MCP Integration**
-- Connects to `@playwright/mcp` server
-- Provides browser automation tools (navigate, click, fill, screenshot)
-- Handles all browser management automatically
-
-### 2. **LLM Intelligence Layer**
-- **DeepSeek Chat v3.1** analyzes web page content
-- Creates action plans to achieve specified goals
-- Identifies form fields and UI elements intelligently
-- Adapts to different website structures
-
-### 3. **FastMCP Framework**
-- Modern MCP server implementation
-- Async/await support for better performance
-- Tool registration and management
-- Error handling and logging
-
-## Project Structure
-
-```
-├── src/
-│   ├── mcp_playwright_server.py      # Basic Playwright MCP wrapper
-│   ├── llm_playwright_controller.py  # LLM-powered automation
-│   ├── llm_demo.py                   # Demonstration scripts
-│   └── example_usage.py              # Usage examples
-├── main.py                           # Main entry point
-├── pyproject.toml                    # Python project config
-└── README.md                         # This file
-```
-
-## Development
-
-### Running Tests
 ```bash
+# Format code
+uv run black .
+
+# Check linting  
+uv run ruff check .
+
+# Fix linting issues
+uv run ruff check --fix .
+```
+
+### Testing
+
+```bash
+# Run tests
 uv run pytest
 ```
 
-### Code Formatting
-```bash
-uv run black .
-```
+### Development Guidelines
 
-### Linting
-```bash
-uv run ruff check .
-```
+- Follow async/await patterns for all I/O operations
+- Use type hints and comprehensive docstrings
+- Implement proper error handling with retries
+- Follow the clean architecture principles
+- Test MCP connectivity before running orchestrator
 
-## Key Components
+## 🔒 Environment Variables
 
-### 1. PlaywrightMCPServer
-Basic wrapper around Playwright MCP providing:
-- `navigate_to_page()` - Navigate to URLs
-- `take_screenshot()` - Capture page screenshots
-- `extract_text()` - Get page text content
-- `click_element()` - Click UI elements
-- `fill_form_field()` - Fill form inputs
+### Required
+- `OPENAI_API_KEY`: Your OpenAI API key for LLM access
 
-### 2. LLMPlaywrightController
-AI-powered automation providing:
-- `analyze_page_and_act()` - Goal-oriented automation
-- `intelligent_form_filling()` - Smart form completion
-- `extract_structured_data()` - AI-guided data extraction
+### Optional  
+- `OPENAI_BASE_URL`: Custom API endpoint for OpenAI-compatible services (e.g., DeepSeek, Together AI, etc.)
 
-### 3. Interactive Demo System
-- Real-time task specification
-- Multiple demonstration scenarios
-- Progress tracking and error handling
+## 📚 Dependencies
 
-## Common Use Cases
+| Package | Version | Purpose |
+|---------|---------|---------|
+| `openai` | ≥1.0.0 | LLM API integration |
+| `fastmcp` | ≥2.0.0 | MCP framework |
+| `pydantic` | ≥2.0.0 | Data validation |
+| `aiohttp` | ≥3.8.0 | Async HTTP operations |
+| `rich` | ≥13.0.0 | Terminal output enhancement |
+| `python-dotenv` | ≥1.0.0 | Environment variable management |
 
-1. **Automated Testing**: AI-driven test case execution
-2. **Data Scraping**: Intelligent content extraction
-3. **Form Automation**: Smart form filling for repetitive tasks
-4. **Website Monitoring**: Automated page analysis and reporting
-5. **Research Automation**: Gathering information from multiple sources
-
-## Troubleshooting
-
-### MCP Connection Issues
-- Ensure `@playwright/mcp` is installed globally
-- Check MCP server configuration in your client
-- Verify Node.js version compatibility
-
-### API Configuration
-- Confirm `OPENAI_API_KEY` and `OPENAI_BASE_URL` are set correctly
-- Test API connectivity independently
-- Check DeepSeek API rate limits
-
-### Browser Automation Issues
-- Playwright may need to install browsers: `npx playwright install`
-- Some sites block automation - use delays and realistic interactions
-- Check for CAPTCHA or bot detection mechanisms
-
-## Contributing
+## 🤝 Contributing
 
 1. Fork the repository
 2. Create a feature branch
-3. Add tests for new functionality
-4. Ensure code formatting with `black` and `ruff`
+3. Make your changes following the code style guidelines
+4. Add tests for new functionality
 5. Submit a pull request
 
-## License
+## 📄 License
 
-This project is for educational purposes. Please respect website terms of service when using automation tools.
+This project is open source and available under the [MIT License](LICENSE).
+
+## 🙏 Acknowledgments
+
+- [FastMCP](https://github.com/jlowin/fastmcp) for the excellent MCP framework
+- [OpenAI](https://openai.com) for the GPT API
+- [Playwright](https://playwright.dev/) for web automation capabilities
+
+---
+
+**Built with ❤️ for the Model Context Protocol community**

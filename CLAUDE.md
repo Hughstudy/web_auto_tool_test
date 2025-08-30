@@ -4,13 +4,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a learning project which use FastMCP to connect Playwright MCP and learn how to use FastMCP API with OpenAI API.
+**MCP Task Orchestrator** is an intelligent task automation system that combines Large Language Models (LLMs) with Model Context Protocol (MCP) tools for complex web-based task execution. The project demonstrates a clean architecture pattern with smart progress evaluation and automatic tool execution.
 
 ## Development Environment
 
 - **Python Version**: Requires Python 3.12+
 - **Package Manager**: Uses `uv` for dependency management and virtual environment
-- **Project Structure**: Standard Python package with `pyproject.toml` configuration
+- **Project Structure**: Clean architecture with separation of concerns
 
 ## Essential Commands
 
@@ -38,66 +38,120 @@ uv run ruff check .
 uv run ruff check --fix .
 ```
 
-## Dependencies and Architecture
-
-### Core Dependencies
-- **OpenAI API**: Primary LLM integration (`openai>=1.0.0`)
-- **MCP Components**: 
-  - `fastmcp>=2.0.0` - MCP framework
-- **Data Processing**: `pydantic>=2.0.0` for data validation, `markdown>=3.5.0` for content processing
-- **Async/HTTP**: `aiohttp>=3.8.0` for async HTTP operations
-- **CLI**: `rich>=13.0.0` for enhanced terminal output
-
-### Project Structure
-- Package source code is expected in `src/` directory (configured in `pyproject.toml`)
-
-## Project Implementation
-
-### Current Implementation Status
-The project successfully implements:
-
-1. **MCP Client** (`src/mcp_client.py`):
-   - FastMCP-based wrapper for connecting to MCP servers
-   - Async context manager support
-   - Methods: `ping()`, `list_tools()`, `call_tool()`
-   - Successfully connects to Playwright MCP server with 21 browser automation tools
-
-2. **LLM Client** (`src/llm_client.py`):
-   - OpenAI API integration with async support
-   - Environment variable support for `OPENAI_API_KEY` and `OPENAI_BASE_URL`
-   - Tool calling capability for MCP integration
-   - Configurable model selection (default: `deepseek/deepseek-chat-v3.1:free`)
-
-3. **Demo Integration** (`main.py`):
-   - MCP connection testing and tool discovery
-   - LLM + MCP tool calling integration
-   - Automatic conversion of MCP tools to OpenAI function format
-
-### Usage
-
+### Running the Application
 ```bash
-# Run the main demo
+# Run the main orchestrator demo
 uv run python main.py
 
-# Set environment variables for LLM integration
+# Set required environment variables
 export OPENAI_API_KEY="your-api-key"
 export OPENAI_BASE_URL="https://your-base-url"  # optional
 ```
 
-### Available Playwright Tools
-The connected MCP server provides 21 browser automation tools including:
-- `browser_navigate`, `browser_click`, `browser_type`
-- `browser_take_screenshot`, `browser_snapshot`
-- `browser_fill_form`, `browser_file_upload`
-- `browser_evaluate`, `browser_wait_for`
-- And more for comprehensive web automation
+## Dependencies and Architecture
+
+### Core Dependencies
+- **OpenAI API**: Primary LLM integration (`openai>=1.0.0`)
+- **MCP Framework**: `fastmcp>=2.0.0` for MCP server communication
+- **Data Validation**: `pydantic>=2.0.0` for structured data handling
+- **Async Operations**: `aiohttp>=3.8.0` for HTTP operations
+- **CLI Enhancement**: `rich>=13.0.0` for terminal output
+- **Configuration**: `python-dotenv>=1.0.0` for environment management
+
+### Architecture Overview
+```
+main.py → TaskOrchestrator → LLMClient + MCPClient
+                          ↓
+                      MessageSystem (conversation management)
+```
+
+## Project Implementation
+
+### Core Components
+
+1. **TaskOrchestrator** (`src/task_orchestrator.py`):
+   - Smart orchestration with progress evaluation
+   - Manages LLM and MCP client interactions
+   - Iterative task execution with completion detection
+   - JSON-based progress assessment
+
+2. **LLMClient** (`src/llm_client.py`):
+   - OpenAI API integration with automatic tool calling
+   - Single-cycle tool execution with retry mechanisms
+   - Support for multiple OpenAI-compatible APIs
+   - Model: `openai/gpt-5-nano` (configurable)
+
+3. **MCPClient** (`src/mcp_client.py`):
+   - FastMCP wrapper for MCP server communication
+   - Async context manager support
+   - Tool discovery and execution capabilities
+   - Connects to Playwright MCP server
+
+4. **MessageSystem** (`src/message_system.py`):
+   - Centralized conversation management
+   - OpenAI format conversion
+   - Tool call tracking and result management
+   - Conversation history and summaries
+
+### Current Capabilities
+
+The system demonstrates complex task orchestration by:
+- **Multi-step Planning**: Breaking complex tasks into executable steps
+- **Progress Evaluation**: Smart assessment of task completion status
+- **Tool Integration**: Seamless MCP tool calling through OpenAI function calling
+- **Error Handling**: Retry mechanisms and graceful failure recovery
+- **Conversation Management**: Proper message formatting and history tracking
+
+### Example Task Flow
+```
+User Request → TaskOrchestrator → Progress Evaluation → Tool Selection → 
+LLM with Tools → MCP Tool Execution → Progress Check → Iteration/Completion
+```
 
 ## MCP Server Configuration
-- **Playwright MCP Server**: `http://localhost:8931/mcp`
-- **Connection**: HTTP/SSE transport via FastMCP
-- **Status**: ✅ Connected and tested
+
+- **Server URL**: `http://localhost:8931/mcp`
+- **Transport**: HTTP/SSE via FastMCP
+- **Tools Available**: 21+ Playwright browser automation tools
+- **Connection Status**: Async context managed
+
+### Available Tool Categories
+- **Navigation**: `browser_navigate`, `browser_go_back`, `browser_refresh`
+- **Interaction**: `browser_click`, `browser_type`, `browser_fill_form`
+- **Content**: `browser_take_screenshot`, `browser_snapshot`, `browser_extract`
+- **Automation**: `browser_wait_for`, `browser_evaluate`, `browser_file_upload`
+
+## Development Guidelines
+
+### Code Style
+- Follow existing patterns and conventions
+- Use async/await for all I/O operations
+- Implement proper error handling with retries
+- Use type hints and docstrings
+
+### Testing Approach
+- Run tests with `uv run pytest`
+- Test MCP connectivity before running orchestrator
+- Validate LLM API configuration
+
+### Architecture Principles
+- **Separation of Concerns**: Each component has a single responsibility
+- **Async First**: All operations are designed for async execution
+- **Clean Interfaces**: Well-defined APIs between components
+- **Error Resilience**: Proper exception handling and recovery
+
+## Environment Variables
+
+Required:
+- `OPENAI_API_KEY`: Your OpenAI API key
+
+Optional:
+- `OPENAI_BASE_URL`: Custom API endpoint for OpenAI-compatible services
 
 ## Notes for Development
-- Configuration uses modern Python packaging standards with `pyproject.toml`
-- Use FastMCP Python API to connect HTTP MCP servers
-- LLM client supports custom base URLs for alternative OpenAI-compatible APIs
+
+- The system uses modern Python packaging with `pyproject.toml`
+- FastMCP provides the bridge between MCP servers and Python clients
+- TaskOrchestrator manages the complete lifecycle of complex tasks
+- MessageSystem ensures proper conversation state management
+- All components support async context management for clean resource handling
