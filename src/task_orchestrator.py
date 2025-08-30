@@ -2,11 +2,13 @@
 Task Orchestrator for smart progress evaluation and execution management.
 """
 
+from email import message
 import json
 from typing import Dict, Any, List
 from .llm_client import LLMClient
 from .mcp_client import MCPClient
 from .message_system import MessageSystem
+from src import message_system
 
 
 class TaskOrchestrator:
@@ -80,11 +82,11 @@ This output should not have something like ```json and ``` in the response.
         # Try with JSON format first, fallback to regular if not supported
         try:
             response = await self.llm_client.chat_completion(
-                messages=messages, response_format={"type": "json_object"}
+                messages=messages, response_format={"type": "json_object"}, tool_choice="none"
             )
         except Exception as e:
             print(f"⚠️  JSON format not supported ({e}), using regular format...")
-            response = await self.llm_client.chat_completion(messages=messages)
+            response = await self.llm_client.chat_completion(messages=messages, tool_choice="none")
 
         content = response.choices[0].message.content
         print(f"🔍 Evaluation response: {content[:200]}...")  # Debug output
@@ -199,6 +201,7 @@ Please start by taking the first necessary action to complete this task.
                 print("✅ Task marked as complete by orchestrator!")
                 return evaluation["accomplished"]
 
+            self.messages.add_user_message(f"You should make your own decision, but you could use {evaluation["next_step"]} as a reference")
             # Use LLM client with automatic tool calling
             await self.llm_client.prompt_with_auto_tools(
                 self.messages, tools=openai_tools

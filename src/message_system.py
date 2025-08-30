@@ -124,7 +124,7 @@ class MessageSystem:
                     summary.append(f"ASSISTANT: {msg.content}")
             elif msg.role == "tool":
                 summary.append(
-                    f"TOOL_RESULT: {msg.content[:200]}{'...' if len(msg.content or '') > 200 else ''}"
+                    f"TOOL_RESULT: {msg.content}"
                 )
             elif msg.role == "system":
                 summary.append(f"SYSTEM: {msg.content}")

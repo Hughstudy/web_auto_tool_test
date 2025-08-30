@@ -34,7 +34,7 @@ class LLMClient:
             kwargs["base_url"] = base_url
 
         self.client = AsyncOpenAI(**kwargs)
-        self.model = "openai/gpt-5-nano"
+        self.model = "deepseek/deepseek-chat-v3.1:free"
 
         # Tool executor function - to be set by orchestrator
         self._tool_executor: Callable[[str, Dict[str, Any]], Awaitable[Any]] = None
@@ -185,7 +185,6 @@ class LLMClient:
             follow_up_response = await self.chat_completion(
                 messages=message_system.to_openai_format(), 
                 model=model,
-                tools=tools,  # Keep tools available for potential further calls
                 tool_choice="none"
             )
             
