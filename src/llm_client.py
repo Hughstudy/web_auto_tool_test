@@ -15,7 +15,7 @@ load_dotenv()
 class LLMClient:
     """LLM Client that handles one prompt cycle with automatic tool execution."""
 
-    def __init__(self, api_key: str = None, base_url: str = None):
+    def __init__(self, model_name: str, api_key: str = None, base_url: str = None):
         """
         Initialize LLM client.
 
@@ -34,7 +34,7 @@ class LLMClient:
             kwargs["base_url"] = base_url
 
         self.client = AsyncOpenAI(**kwargs)
-        self.model = "deepseek/deepseek-chat-v3.1:free"
+        self.model = model_name
 
         # Tool executor function - to be set by orchestrator
         self._tool_executor: Callable[[str, Dict[str, Any]], Awaitable[Any]] = None

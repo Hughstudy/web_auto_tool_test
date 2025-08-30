@@ -15,7 +15,8 @@ async def main():
 
     try:
         # Create clean, focused clients
-        llm_client = LLMClient()
+        model_name = "google/gemini-2.5-flash-lite"
+        llm_client = LLMClient(model_name)
         mcp_client = MCPClient("http://localhost:8931/mcp")
 
         # Use MCP client as context manager
