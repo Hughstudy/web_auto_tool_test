@@ -42,4 +42,12 @@ class MCPClient:
 
     async def call_tool(self, name: str, arguments: Dict[str, Any]) -> Any:
         """Call a tool with arguments."""
-        return await self.client.call_tool(name, arguments)
+        try:
+            return await self.client.call_tool(name, arguments)
+        except Exception as e:
+            # Add more specific error information
+            error_msg = str(e)
+            if "session" in error_msg.lower() or "terminated" in error_msg.lower():
+                raise Exception(f"Browser session terminated: {error_msg}")
+            else:
+                raise Exception(f"Tool call failed: {error_msg}")

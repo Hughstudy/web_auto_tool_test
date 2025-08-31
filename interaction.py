@@ -117,6 +117,71 @@ class TerminalInterface:
             self.console.print(f"[red]❌ Failed to initialize: {e}[/red]")
             return False
             
+    async def ensure_mcp_connection(self):
+        """Ensure MCP connection is active, reconnect if needed."""
+        if not self.mcp_client:
+            self.console.print("[yellow]⚠️  No MCP client, initializing...[/yellow]")
+            return await self.initialize_clients()
+            
+        try:
+            # Test the connection
+            ping_result = await self.mcp_client.ping()
+            if not ping_result:
+                self.console.print("[yellow]⚠️  MCP connection lost, reconnecting...[/yellow]")
+                # Close old connection
+                try:
+                    await self.mcp_client.__aexit__(None, None, None)
+                except:
+                    pass
+                # Reinitialize
+                return await self.initialize_clients()
+            return True
+        except Exception as e:
+            self.console.print(f"[yellow]⚠️  MCP connection error: {e}, reconnecting...[/yellow]")
+            try:
+                await self.mcp_client.__aexit__(None, None, None)
+            except:
+                pass
+            return await self.initialize_clients()
+    
+    async def _recreate_mcp_connection_preserving_memory(self):
+        """Recreate MCP connection while preserving orchestrator and conversation memory."""
+        # Save the current conversation memory
+        saved_messages = None
+        if self.orchestrator and self.orchestrator.messages:
+            saved_messages = self.orchestrator.messages
+            
+        # Close old MCP connection cleanly
+        if self.mcp_client:
+            try:
+                await self.mcp_client.__aexit__(None, None, None)
+            except:
+                pass
+                
+        # Create new MCP connection
+        try:
+            self.mcp_client = MCPClient("http://localhost:8931/mcp")
+            await self.mcp_client.__aenter__()
+            
+            # Recreate orchestrator with the same LLM client but new MCP client
+            if self.orchestrator:
+                # Preserve the existing LLM client
+                old_llm_client = self.orchestrator.llm_client
+                self.orchestrator = InteractiveOrchestrator(old_llm_client, self.mcp_client)
+                
+                # Restore conversation memory
+                if saved_messages:
+                    self.orchestrator.messages = saved_messages
+                    self.console.print("[green]✅ Session reconnected with conversation memory preserved[/green]")
+                else:
+                    self.console.print("[green]✅ Session reconnected[/green]")
+            else:
+                # Fallback to full initialization if orchestrator was somehow lost
+                await self.initialize_clients()
+                
+        except Exception as e:
+            self.console.print(f"[red]❌ Failed to recreate MCP connection: {e}[/red]")
+            
     def setup_interrupt_handler(self):
         """Setup keyboard interrupt handling for ESC key."""
         def signal_handler(signum, frame):
@@ -228,6 +293,11 @@ class TerminalInterface:
                     if not self.orchestrator:
                         self.console.print("[red]❌ System not initialized[/red]")
                         continue
+                    
+                    # Ensure MCP connection is active before starting task
+                    if not await self.ensure_mcp_connection():
+                        self.console.print("[red]❌ Cannot establish MCP connection[/red]")
+                        continue
                         
                     self.console.print(f"\n[bold blue]🎯 Starting task:[/bold blue] {user_input}")
                     self.console.print("[dim](Press Ctrl+C to interrupt)[/dim]")
@@ -244,7 +314,26 @@ class TerminalInterface:
                     except KeyboardInterrupt:
                         self.console.print("\n[yellow]⏹️  Task interrupted[/yellow]")
                     except Exception as e:
-                        self.console.print(f"\n[red]❌ Task failed: {e}[/red]")
+                        error_msg = str(e)
+                        self.console.print(f"\n[red]❌ Task failed: {error_msg}[/red]")
+                        
+                        # Check if this is a session termination error
+                        if "session" in error_msg.lower() or "terminated" in error_msg.lower():
+                            self.console.print("[yellow]⚠️  Browser session was terminated. This is normal after task completion.[/yellow]")
+                            self.console.print("[yellow]💡 Reconnecting while preserving conversation memory...[/yellow]")
+                            # Only recreate MCP connection, preserve orchestrator and its memory
+                            await self._recreate_mcp_connection_preserving_memory()
+                        else:
+                            # Check if MCP connection is still alive for other errors
+                            if self.mcp_client:
+                                try:
+                                    ping_result = await self.mcp_client.ping()
+                                    if not ping_result:
+                                        self.console.print("[yellow]⚠️  MCP server connection lost. Will reconnect on next task.[/yellow]")
+                                    else:
+                                        self.console.print("[green]✅ MCP server connection is still active[/green]")
+                                except Exception as ping_error:
+                                    self.console.print(f"[yellow]⚠️  Cannot ping MCP server: {ping_error}[/yellow]")
                         
             except KeyboardInterrupt:
                 if self.task_running:

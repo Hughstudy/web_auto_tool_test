@@ -4,7 +4,7 @@ Interactive implementation that inherits from BaseOrchestrator with cancellation
 """
 
 import asyncio
-from typing import Dict, Any, List, Callable
+from typing import Callable
 from .base_orchestrator import BaseOrchestrator
 from ..llm_client import LLMClient
 from ..mcp_client import MCPClient

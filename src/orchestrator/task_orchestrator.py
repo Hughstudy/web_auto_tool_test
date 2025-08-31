@@ -3,7 +3,7 @@ Task Orchestrator for smart progress evaluation and execution management.
 Simple batch processing implementation that inherits from BaseOrchestrator.
 """
 
-from typing import Dict, Any, List
+from typing import Dict, Any
 from .base_orchestrator import BaseOrchestrator
 from ..llm_client import LLMClient
 from ..mcp_client import MCPClient
