@@ -57,6 +57,8 @@ cd mcp-task-orchestrator
 
 # Install dependencies
 uv install
+
+npx @playwright/mcp@latest --port 8931
 ```
 
 ### Configuration

@@ -198,3 +198,36 @@ class LLMClient:
             
         else:
             print(f"🤖 LLM: {assistant_message.content}")
+
+        return {
+            "assistant_message": assistant_message,
+            "tool_results": tool_results,
+            "has_tool_calls": bool(assistant_message.tool_calls),
+        }
+
+    async def list_available_models(self) -> List[Dict[str, Any]]:
+        """
+        List available models from OpenAI API.
+        
+        Returns:
+            List of available models with their details
+        """
+        try:
+            models_response = await self.client.models.list()
+            models = []
+            
+            for model in models_response.data:
+                models.append({
+                    "id": model.id,
+                    "object": model.object,
+                    "created": model.created,
+                    "owned_by": model.owned_by,
+                })
+            
+            # Sort by model ID for better display
+            models.sort(key=lambda x: x["id"])
+            return models
+            
+        except Exception as e:
+            print(f"❌ Failed to fetch models: {e}")
+            return []

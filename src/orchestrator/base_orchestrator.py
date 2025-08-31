@@ -1,18 +1,17 @@
 """
-Task Orchestrator for smart progress evaluation and execution management.
+Base Orchestrator for smart progress evaluation and execution management.
+Contains all common logic shared between different orchestrator implementations.
 """
 
-from email import message
 import json
-from typing import Dict, Any, List
-from .llm_client import LLMClient
-from .mcp_client import MCPClient
-from .message_system import MessageSystem
-from src import message_system
+from typing import Dict, Any, List, Callable, Optional
+from ..llm_client import LLMClient
+from ..mcp_client import MCPClient
+from ..message_system import MessageSystem
 
 
-class TaskOrchestrator:
-    """Smart orchestrator for evaluating task progress and managing execution."""
+class BaseOrchestrator:
+    """Base orchestrator with common functionality for task evaluation and execution."""
 
     def __init__(self, llm_client: LLMClient, mcp_client: MCPClient):
         self.llm_client = llm_client
@@ -134,17 +133,12 @@ This output should not have something like ```json and ``` in the response.
                 "reasoning": f"Parsed from text response (JSON failed: {str(e)})",
             }
 
-    async def execute_task(self, user_request: str, max_iterations: int = 25) -> str:
+    async def _prepare_task_execution(self, user_request: str):
         """
-        Execute a complex task with smart orchestration.
-        LLM client handles automatic tool calling, orchestrator manages iterations.
-
-        Args:
-            user_request: The user's task request
-            max_iterations: Maximum number of iterations
-
+        Common preparation steps for task execution.
+        
         Returns:
-            Final result or status
+            Tuple of (tool_names, openai_tools)
         """
         print(f"🎯 Starting task execution: {user_request}")
 
@@ -184,29 +178,64 @@ Please start by taking the first necessary action to complete this task.
 """
         )
 
-        iteration = 0
-        while iteration < max_iterations:
-            iteration += 1
-            print(f"\n--- Iteration {iteration} ---")
+        return tool_names, openai_tools
 
-            # Get orchestrator evaluation
-            evaluation = await self.evaluate_progress(user_request, tool_names)
+    async def _execute_iteration(
+        self, 
+        iteration: int, 
+        user_request: str, 
+        tool_names: List[str], 
+        openai_tools: List[Dict], 
+        should_stop: Optional[Callable[[], bool]] = None
+    ) -> Dict[str, Any]:
+        """
+        Execute a single iteration of the task orchestration loop.
+        
+        Args:
+            iteration: Current iteration number
+            user_request: Original user request
+            tool_names: List of available tool names
+            openai_tools: OpenAI-formatted tools
+            should_stop: Optional callback to check if execution should stop
+            
+        Returns:
+            Dictionary with evaluation results and completion status
+        """
+        print(f"\n--- Iteration {iteration} ---")
 
-            print(
-                f"📊 Progress: {evaluation['progress_percentage']}% - {evaluation['accomplished']}"
-            )
-            print(f"🤔 Next step: {evaluation['next_step']}")
+        # Check if user wants to stop (for interactive mode)
+        if should_stop and should_stop():
+            print("🛑 Task interrupted by user")
+            final_eval = await self.evaluate_progress(user_request, tool_names)
+            return {**final_eval, "_interrupted": True}
 
-            if evaluation["is_complete"]:
-                print("✅ Task marked as complete by orchestrator!")
-                return evaluation["accomplished"]
+        # Get orchestrator evaluation
+        evaluation = await self.evaluate_progress(user_request, tool_names)
 
-            self.messages.add_user_message(f"You should make your own decision, but you could use {evaluation["next_step"]} as a reference")
-            # Use LLM client with automatic tool calling
-            await self.llm_client.prompt_with_auto_tools(
-                self.messages, tools=openai_tools
-            )
+        print(
+            f"📊 Progress: {evaluation['progress_percentage']}% - {evaluation['accomplished']}"
+        )
+        print(f"🤔 Next step: {evaluation['next_step']}")
 
+        if evaluation["is_complete"]:
+            print("✅ Task marked as complete by orchestrator!")
+            return {**evaluation, "_completed": True}
+
+        # Check interrupt again before tool execution (for interactive mode)
+        if should_stop and should_stop():
+            print("🛑 Task interrupted by user")
+            return {**evaluation, "_interrupted": True}
+
+        self.messages.add_user_message(f"You should make your own decision, but you could use {evaluation['next_step']} as a reference")
+
+        # Use LLM client with automatic tool calling
+        await self.llm_client.prompt_with_auto_tools(
+            self.messages, tools=openai_tools
+        )
+
+        return {**evaluation, "_continue": True}
+
+    def _handle_max_iterations(self, max_iterations: int, final_eval: Dict[str, Any]) -> str:
+        """Handle the case when maximum iterations are reached."""
         print(f"⚠️  Reached maximum iterations ({max_iterations})")
-        final_eval = await self.evaluate_progress(user_request, tool_names)
         return f"Task partially completed ({final_eval['progress_percentage']}%): {final_eval['accomplished']}"

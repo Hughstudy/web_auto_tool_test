@@ -6,7 +6,7 @@ Architecture: main -> TaskOrchestrator -> LLMClient + MCPClient
 import asyncio
 from src.llm_client import LLMClient
 from src.mcp_client import MCPClient
-from src.task_orchestrator import TaskOrchestrator
+from src.orchestrator import TaskOrchestrator
 
 
 async def main():

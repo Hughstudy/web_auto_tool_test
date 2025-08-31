@@ -40,13 +40,33 @@ uv run ruff check --fix .
 
 ### Running the Application
 ```bash
-# Run the main orchestrator demo
+# Run the interactive terminal interface (RECOMMENDED)
+uv run python interaction.py
+
+# Run the original orchestrator demo
 uv run python main.py
 
 # Set required environment variables
 export OPENAI_API_KEY="your-api-key"
 export OPENAI_BASE_URL="https://your-base-url"  # optional
 ```
+
+### Interactive Terminal Interface
+The system now includes a sophisticated terminal interface (`interaction.py`) with the following features:
+
+#### Commands Available:
+- `/model` - List all available models from OpenAI API (320+ models)
+- `/model <name>` - Switch to a different model (e.g., `/model gpt-4o`)
+- `/clear` - Clear conversation history and reset context
+- `/quit` - Exit the program cleanly
+- `Ctrl+C/ESC` - Interrupt running tasks immediately
+
+#### Key Features:
+- **Dynamic Model Discovery**: Automatically fetches and displays all available models from OpenAI API
+- **Smart Task Interruption**: Press Ctrl+C during task execution to stop immediately
+- **Conversation Reset**: New prompts automatically interrupt running tasks and reset iterations
+- **Rich Terminal UI**: Professional interface with colored output, tables, and progress indicators
+- **Graceful Error Handling**: Robust error recovery and user feedback
 
 ## Dependencies and Architecture
 
@@ -60,34 +80,60 @@ export OPENAI_BASE_URL="https://your-base-url"  # optional
 
 ### Architecture Overview
 ```
+# Interactive Mode (RECOMMENDED)
+interaction.py → TerminalInterface → InteractiveOrchestrator → LLMClient + MCPClient
+                                             ↓                        ↓
+                                    BaseOrchestrator            MessageSystem
+                                    (common logic)           (conversation management)
+
+# Original Demo Mode  
 main.py → TaskOrchestrator → LLMClient + MCPClient
-                          ↓
-                      MessageSystem (conversation management)
+                 ↓                    ↓
+         BaseOrchestrator      MessageSystem
+         (common logic)    (conversation management)
 ```
 
 ## Project Implementation
 
 ### Core Components
 
-1. **TaskOrchestrator** (`src/task_orchestrator.py`):
-   - Smart orchestration with progress evaluation
-   - Manages LLM and MCP client interactions
-   - Iterative task execution with completion detection
-   - JSON-based progress assessment
+1. **TerminalInterface** (`interaction.py`):
+   - Rich terminal UI with command handling
+   - Dynamic model switching and discovery
+   - Task interruption and conversation management
+   - Professional user experience with colored output
 
-2. **LLMClient** (`src/llm_client.py`):
+2. **BaseOrchestrator** (`src/orchestrator/base_orchestrator.py`):
+   - Common orchestration logic shared by all orchestrator types
+   - Progress evaluation and JSON-based assessment
+   - Tool preparation and iteration execution
+   - Clean separation of concerns for maintainability
+
+3. **InteractiveOrchestrator** (`src/orchestrator/interactive_orchestrator.py`):
+   - Inherits from BaseOrchestrator with interrupt support
+   - Async cancellation handling for responsive UI
+   - Progress evaluation with user control
+   - Specialized for terminal interaction use cases
+
+4. **TaskOrchestrator** (`src/orchestrator/task_orchestrator.py`):
+   - Inherits from BaseOrchestrator for batch processing
+   - Simple task execution without interruption
+   - Ideal for automated/scripted workflows
+   - Minimal overhead for straightforward tasks
+
+5. **LLMClient** (`src/llm_client.py`):
    - OpenAI API integration with automatic tool calling
    - Single-cycle tool execution with retry mechanisms
    - Support for multiple OpenAI-compatible APIs
    - Model: `openai/gpt-5-nano` (configurable)
 
-3. **MCPClient** (`src/mcp_client.py`):
+6. **MCPClient** (`src/mcp_client.py`):
    - FastMCP wrapper for MCP server communication
    - Async context manager support
    - Tool discovery and execution capabilities
    - Connects to Playwright MCP server
 
-4. **MessageSystem** (`src/message_system.py`):
+7. **MessageSystem** (`src/message_system.py`):
    - Centralized conversation management
    - OpenAI format conversion
    - Tool call tracking and result management
