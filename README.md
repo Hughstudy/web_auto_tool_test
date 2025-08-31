@@ -5,39 +5,62 @@ An intelligent task automation system that combines Large Language Models (LLMs)
 ## 🎯 Overview
 
 This project demonstrates a clean architecture pattern for building AI agents that can execute complex, multi-step tasks by combining:
-- **OpenAI API** for intelligent reasoning and planning
+- **Multiple LLM APIs** (OpenAI, Google Gemini, etc.) for intelligent reasoning and planning
 - **FastMCP** for connecting to MCP servers
 - **Playwright MCP Server** for web browser automation
 - **Smart orchestration** with progress evaluation and automatic tool execution
+- **Interactive Terminal Interface** with rich UI, model switching, and task interruption
+- **Modular Architecture** with BaseOrchestrator, TaskOrchestrator, and InteractiveOrchestrator
 
 ## 🏗️ Architecture
 
 ```
-┌─────────────┐    ┌──────────────────┐    ┌─────────────┐
-│   main.py   │───▶│ TaskOrchestrator │◀───│ MessageSystem│
-└─────────────┘    └──────────────────┘    └─────────────┘
-                           │
-                    ┌──────┴──────┐
-                    ▼             ▼
-              ┌───────────┐  ┌─────────────┐
-              │ LLMClient │  │  MCPClient  │
-              └───────────┘  └─────────────┘
-                    │              │
-                    ▼              ▼
-            ┌─────────────┐  ┌─────────────┐
-            │ OpenAI API  │  │Playwright   │
-            │             │  │MCP Server   │
-            └─────────────┘  └─────────────┘
+┌─────────────────┐    ┌──────────────────┐    ┌─────────────┐
+│ TerminalInterface│    │ BaseOrchestrator │    │ MessageSystem│
+│   (interaction.py)│    │  (common logic)  │    └─────────────┘
+└─────────────────┘    └──────────────────┘           ▲
+         │                       │                   │
+         ▼                       ▼                   │
+┌─────────────────┐    ┌──────────────────┐          │
+│TaskOrchestrator │    │InteractiveOrch. │          │
+│   (main.py)     │    │  (interactive)   │          │
+└─────────────────┘    └──────────────────┘          │
+         │                       │                   │
+         └───────────────────────┼───────────────────┘
+                                 ▼
+                    ┌────────────┴────────────┐
+                    ▼                         ▼
+              ┌───────────┐            ┌─────────────┐
+              │ LLMClient │            │  MCPClient  │
+              └───────────┘            └─────────────┘
+                    │                         │
+                    ▼                         ▼
+            ┌─────────────┐            ┌─────────────┐
+            │ Multiple    │            │Playwright   │
+            │ LLM APIs    │            │MCP Server   │
+            │(OpenAI, etc)│            └─────────────┘
+            └─────────────┘
 ```
 
 ## ✨ Features
 
+### Core Features
 - **Smart Task Orchestration**: Automatically breaks down complex tasks into manageable steps
-- **Progress Evaluation**: JSON-based progress assessment with completion detection  
+- **Progress Evaluation**: JSON-based progress assessment with completion detection
 - **Automatic Tool Calling**: Seamless integration between LLM reasoning and MCP tool execution
+- **Multiple LLM Support**: Compatible with OpenAI, Google Gemini, and other OpenAI-compatible APIs
 - **Error Resilience**: Retry mechanisms and graceful failure recovery
 - **Clean Architecture**: Separation of concerns with well-defined interfaces
 - **Async Support**: Full async/await support for high performance
+
+### Terminal Interface Features
+- **Rich Interactive UI**: Professional terminal interface with colored output and progress indicators
+- **Dynamic Model Discovery**: Automatically fetches and displays all available models from LLM APIs (320+ models)
+- **Smart Model Switching**: Switch between different models during runtime (`/model gpt-4o`)
+- **Task Interruption**: Press Ctrl+C or ESC to immediately stop running tasks
+- **Conversation Management**: Clear conversation history (`/clear`) and automatic reset for new tasks
+- **Graceful Error Handling**: Robust error recovery with MCP server reconnection
+- **Command System**: Full command-line interface with `/model`, `/clear`, `/quit` commands
 
 ## 🚀 Quick Start
 
@@ -73,13 +96,26 @@ export OPENAI_API_KEY="your-api-key-here"
 export OPENAI_BASE_URL="https://api.your-provider.com/v1"
 ```
 
-### Run the Demo
+### Run the Applications
 
+#### Interactive Terminal Interface (Recommended)
+```bash
+uv run python interaction.py
+```
+
+The interactive terminal provides:
+- Rich UI with colored output and progress indicators
+- Dynamic model switching (`/model gpt-4o`)
+- Task interruption with Ctrl+C
+- Conversation management (`/clear`)
+- Automatic error recovery and reconnection
+
+#### Demo Script
 ```bash
 uv run python main.py
 ```
 
-The demo will execute a complex task that:
+The demo script executes a predefined complex task:
 1. Opens Google.com
 2. Searches for Nvidia's latest earnings call transcript
 3. Reads and analyzes the content
@@ -90,49 +126,85 @@ The demo will execute a complex task that:
 ```
 src/
 ├── __init__.py
-├── task_orchestrator.py    # Main orchestration logic
-├── llm_client.py          # OpenAI API integration  
-├── mcp_client.py          # MCP server communication
-└── message_system.py      # Conversation management
+├── llm_client.py              # Multi-API LLM integration (OpenAI, Gemini, etc.)
+├── mcp_client.py              # FastMCP server communication
+├── message_system.py          # Conversation management and history
+└── orchestrator/
+    ├── __init__.py
+    ├── base_orchestrator.py   # Common orchestration logic
+    ├── task_orchestrator.py   # Batch processing orchestrator
+    └── interactive_orchestrator.py  # Interactive terminal orchestrator
 
-main.py                    # Demo application
-pyproject.toml            # Project configuration
-CLAUDE.md                 # Development guidelines
+interaction.py              # Rich terminal interface with model switching
+main.py                     # Demo application with predefined tasks
+pyproject.toml             # Modern Python packaging configuration
+CLAUDE.md                  # Development guidelines and project details
+README.md                  # This file
 ```
 
 ## 🔧 Core Components
 
-### TaskOrchestrator
+### TerminalInterface (`interaction.py`)
 
-The brain of the system that manages task execution:
-- Evaluates progress with JSON-based assessment
-- Coordinates between LLM and MCP clients
-- Implements iterative execution with smart stopping conditions
-- Handles up to 25 iterations with progress tracking
+Sophisticated terminal interface for interactive task orchestration:
+- **Rich UI**: Professional interface with colored output, tables, and progress indicators
+- **Dynamic Model Management**: Lists 320+ available models, switches models on-the-fly
+- **Smart Task Control**: Interrupt running tasks with Ctrl+C, automatic conversation reset
+- **Command System**: `/model`, `/clear`, `/quit` commands with intelligent handling
+- **Error Recovery**: Automatic MCP server reconnection while preserving conversation memory
+- **Graceful Shutdown**: Clean resource cleanup and session management
 
-### LLMClient
+### BaseOrchestrator (`src/orchestrator/base_orchestrator.py`)
 
-OpenAI API integration with advanced features:
-- Automatic tool calling with retry mechanisms
-- Support for multiple OpenAI-compatible APIs
-- Single-cycle tool execution with follow-up processing
-- Configurable model selection
+Foundation orchestrator containing all common logic:
+- **Progress Evaluation**: JSON-based assessment with intelligent completion detection
+- **Tool Preparation**: Automatic MCP tool discovery and OpenAI format conversion
+- **Iteration Management**: Smart execution loops with configurable stopping conditions
+- **Error Handling**: Robust fallback mechanisms for various API response formats
+- **Message Management**: Integration with MessageSystem for conversation tracking
 
-### MCPClient  
+### TaskOrchestrator (`src/orchestrator/task_orchestrator.py`)
+
+Batch processing orchestrator for automated workflows:
+- **Simple Execution**: Straightforward task completion without user interaction
+- **Minimal Overhead**: Lightweight implementation for scripted environments
+- **Clean Architecture**: Inherits from BaseOrchestrator with specialized behavior
+- **Demo Integration**: Used in `main.py` for predefined task execution
+
+### InteractiveOrchestrator (`src/orchestrator/interactive_orchestrator.py`)
+
+Interactive orchestrator with user control capabilities:
+- **Interrupt Support**: Async cancellation handling for responsive UI
+- **Progress Evaluation**: User-controlled task assessment with interruption points
+- **Terminal Integration**: Specialized for rich terminal interface use cases
+- **Memory Preservation**: Maintains conversation context during interruptions
+
+### LLMClient (`src/llm_client.py`)
+
+Multi-API LLM integration with advanced features:
+- **Multiple Providers**: Support for OpenAI, Google Gemini, and compatible APIs
+- **Automatic Tool Calling**: Seamless function calling with retry mechanisms
+- **Single-Cycle Execution**: Efficient tool execution with follow-up processing
+- **Model Flexibility**: Dynamic model switching and configuration
+- **Error Resilience**: Robust handling of API failures and format variations
+
+### MCPClient (`src/mcp_client.py`)
 
 FastMCP wrapper for MCP server communication:
-- Async context manager for clean resource handling
-- Tool discovery and execution capabilities
-- Direct integration with Playwright MCP server
-- Connection testing and health checks
+- **Async Context Management**: Clean resource handling with automatic cleanup
+- **Tool Discovery**: Dynamic tool enumeration and capability assessment
+- **Health Monitoring**: Connection testing and automatic reconnection
+- **Playwright Integration**: Direct compatibility with Playwright MCP server
+- **Performance Optimized**: Efficient tool execution with connection pooling
 
-### MessageSystem
+### MessageSystem (`src/message_system.py`)
 
-Centralized conversation management:
-- OpenAI format conversion and compatibility
-- Tool call tracking and result management
-- Conversation history and summaries
-- Thread-safe message handling
+Centralized conversation management system:
+- **Multi-Format Support**: OpenAI and custom format compatibility
+- **Tool Call Tracking**: Complete request/response cycle management
+- **Conversation History**: Persistent context with intelligent summarization
+- **Thread Safety**: Concurrent access protection for multi-threaded environments
+- **Memory Management**: Efficient conversation pruning and cleanup
 
 ## 🛠️ Available Tools
 
@@ -224,12 +296,14 @@ uv run pytest
 
 | Package | Version | Purpose |
 |---------|---------|---------|
-| `openai` | ≥1.0.0 | LLM API integration |
-| `fastmcp` | ≥2.0.0 | MCP framework |
-| `pydantic` | ≥2.0.0 | Data validation |
+| `openai` | ≥1.0.0 | Multi-API LLM integration (OpenAI, Gemini, etc.) |
+| `fastmcp` | ≥2.0.0 | MCP framework for tool communication |
+| `pydantic` | ≥2.0.0 | Data validation and type checking |
+| `rich` | ≥13.0.0 | Rich terminal UI and formatting |
 | `aiohttp` | ≥3.8.0 | Async HTTP operations |
-| `rich` | ≥13.0.0 | Terminal output enhancement |
+| `markdown` | ≥3.5.0 | Markdown processing and rendering |
 | `python-dotenv` | ≥1.0.0 | Environment variable management |
+| `asyncio` | ≥3.4.3 | Async programming support |
 
 ## 🤝 Contributing
 
