@@ -17,6 +17,37 @@ class BaseOrchestrator:
         self.llm_client = llm_client
         self.mcp_client = mcp_client
         self.messages = MessageSystem()
+        self.token_threshold = 25000  # ~100k characters, trigger compaction
+
+    async def _auto_compact_if_needed(self) -> bool:
+        """
+        Automatically compact conversation if it gets too long.
+        
+        Returns:
+            True if compaction was performed, False otherwise
+        """
+        estimated_tokens = self.messages.estimate_token_count()
+        
+        if estimated_tokens > self.token_threshold:
+            print(f"🗜️  Auto-compacting conversation ({estimated_tokens} estimated tokens > {self.token_threshold} threshold)")
+            
+            try:
+                # Compact the conversation
+                compacted_messages = await self.messages.compact_conversation(self.llm_client, target_words=5000)
+                
+                # Replace current messages with compacted version
+                self.messages = compacted_messages
+                
+                new_token_count = self.messages.estimate_token_count()
+                print(f"✅ Conversation compacted: {estimated_tokens} → {new_token_count} estimated tokens")
+                
+                return True
+                
+            except Exception as e:
+                print(f"❌ Failed to compact conversation: {e}")
+                return False
+        
+        return False
 
     async def evaluate_progress(
         self,
@@ -33,6 +64,9 @@ class BaseOrchestrator:
         Returns:
             Evaluation with progress assessment and next step suggestions
         """
+        # Auto-compact if conversation is getting too long
+        await self._auto_compact_if_needed()
+        
         # Create evaluation prompt
         tools_list = ", ".join(available_tools)  # Show first 10 tools
 
@@ -167,6 +201,7 @@ This output should not have something like ```json and ``` in the response.
 
         # Initialize conversation with MessageSystem
         self.messages.clear()
+        self.messages.set_last_request(user_request)
         self.messages.add_user_message(
             f"""
 Task: {user_request}

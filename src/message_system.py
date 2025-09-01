@@ -2,7 +2,6 @@
 Message System for managing OpenAI chat messages with proper formatting.
 """
 
-import re
 from typing import Dict, Any, List, Optional
 from dataclasses import dataclass
 
@@ -38,10 +37,16 @@ class MessageSystem:
     def __init__(self):
         self.messages: List[Message] = []
         self._conversation_id = None
+        self.last_request: Optional[str] = None
 
     def clear(self):
         """Clear all messages."""
         self.messages.clear()
+
+    def set_last_request(self, request: str) -> "MessageSystem":
+        """Set the last user request for context preservation."""
+        self.last_request = request
+        return self
 
     def add_user_message(self, content: str) -> "MessageSystem":
         """Add a user message."""
@@ -131,6 +136,82 @@ class MessageSystem:
                 summary.append(f"SYSTEM: {msg.content}")
 
         return "\n".join(summary)
+    
+    def estimate_token_count(self) -> int:
+        """Estimate token count of the conversation (rough approximation)."""
+        text = self.get_conversation_summary()
+        # Rough approximation: ~4 characters per token
+        return len(text) // 4
+    
+    async def compact_conversation(self, llm_client, target_words: int = 5000) -> "MessageSystem":
+        """
+        Compact the conversation to reduce token usage while preserving key information.
+        
+        Args:
+            llm_client: LLM client to use for summarization
+            target_words: Target word count for the compacted conversation
+            
+        Returns:
+            New MessageSystem with compacted messages
+        """
+        if len(self.messages) <= 2:  # Don't compact very short conversations
+            return self.clone()
+            
+        # Use last_request if available, otherwise get first user message
+        request_to_use = self.last_request
+        if not request_to_use:
+            for msg in self.messages:
+                if msg.role == "user":
+                    request_to_use = msg.content
+                    break
+                    
+        if not request_to_use:
+            return self.clone()
+            
+        # Build summary of accomplishments and results
+        conversation_text = self.get_conversation_summary()
+        
+        # Create summarization prompt
+        compact_prompt = f"""Please create a concise summary of this task execution conversation.
+
+FULL CONVERSATION:
+{conversation_text}
+
+Create a summary that includes:
+1. What has been accomplished so far
+2. Key results and findings
+3. Current status of the task
+4. Any important context needed to continue
+
+Keep the summary focused and under {target_words} words while preserving all essential information for task continuation.
+
+Format the response as a clear, structured summary without any markdown or special formatting."""
+
+        try:
+            # Use LLM to create compact summary
+            messages = [{"role": "user", "content": compact_prompt}]
+            response = await llm_client.chat_completion(messages=messages, tool_choice="none")
+            summary_content = response.choices[0].message.content
+            
+            # Create new MessageSystem with compacted conversation
+            compacted = MessageSystem()
+            
+            # Add the compacted summary as a single user message
+            compact_user_message = f"""Task: {request_to_use}
+
+Progress Summary:
+{summary_content}
+
+Please continue with the task based on this progress summary."""
+            
+            compacted.add_user_message(compact_user_message)
+            
+            return compacted
+            
+        except Exception as e:
+            print(f"⚠️  Failed to compact conversation: {e}")
+            # Fallback: return clone of original
+            return self.clone()
 
     def clone(self) -> "MessageSystem":
         """Create a deep copy of the message system."""
