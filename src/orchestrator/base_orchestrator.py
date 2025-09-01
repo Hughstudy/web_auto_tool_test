@@ -17,7 +17,7 @@ class BaseOrchestrator:
         self.llm_client = llm_client
         self.mcp_client = mcp_client
         self.messages = MessageSystem()
-        self.token_threshold = 25000  # ~100k characters, trigger compaction
+        self.token_threshold = 100000
 
     async def _auto_compact_if_needed(self) -> bool:
         """
