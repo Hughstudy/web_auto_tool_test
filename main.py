@@ -4,41 +4,46 @@ Architecture: main -> TaskOrchestrator -> LLMClient + MCPClient
 """
 
 import asyncio
-from src.llm_client import LLMClient
-from src.mcp_client import MCPClient
+from rich.console import Console
+from src.resource_manager import ResourceManager
 from src.orchestrator import TaskOrchestrator
 
 
 async def main():
-    """Simple demo with clean architecture: main -> TaskOrchestrator -> clients."""
-    print("🤖 Smart Task Orchestration Demo")
+    """Simple demo with clean architecture using ResourceManager."""
+    console = Console()
+    console.print("🤖 Smart Task Orchestration Demo", style="bold blue")
 
     try:
-        # Create clean, focused clients
-        model_name = "google/gemini-2.5-flash-lite"
-        llm_client = LLMClient(model_name)
-        mcp_client = MCPClient("http://localhost:8931/mcp")
+        # Initialize resource manager
+        resource_manager = ResourceManager(console, "google/gemini-2.5-flash-lite")
+        
+        # Initialize clients
+        if not await resource_manager.initialize_clients():
+            console.print("[red]❌ Failed to initialize clients[/red]")
+            return
 
-        # Use MCP client as context manager
-        async with mcp_client:
-            # Create orchestrator with both clients
-            orchestrator = TaskOrchestrator(llm_client, mcp_client)
+        # Create orchestrator with clients from resource manager
+        orchestrator = TaskOrchestrator(resource_manager.llm_client, resource_manager.mcp_client)
 
-            # User's task request - orchestrator handles all the complexity
-            user_request = """
-            1. Open google.com and search for the latest earnings call transcript for Nvidia
-            2. Try to find the latest earnings call transcript
-            3. Read the earnings call transcript
-            4. Give me a summary of the earnings call transcript QA session
-            """
+        # User's task request - orchestrator handles all the complexity
+        user_request = """
+        1. Open google.com and search for the latest earnings call transcript for Nvidia
+        2. Try to find the latest earnings call transcript from Yahoo Finance
+        3. Read the earnings call transcript
+        4. Give me a summary of the earnings call transcript QA session
+        """
 
-            # Execute task with smart orchestration
-            result = await orchestrator.execute_task(user_request)
+        # Execute task with smart orchestration
+        result = await orchestrator.execute_task(user_request)
 
-            print(f"\n🎉 Final Result: {result}")
+        console.print(f"\n🎉 Final Result: {result}", style="bold green")
+
+        # Cleanup
+        await resource_manager.cleanup()
 
     except Exception as e:
-        print(f"❌ Demo failed: {e}")
+        console.print(f"❌ Demo failed: {e}", style="red")
         raise e
 
 if __name__ == "__main__":

@@ -81,16 +81,18 @@ The system now includes a sophisticated terminal interface (`interaction.py`) wi
 ### Architecture Overview
 ```
 # Interactive Mode (RECOMMENDED)
-interaction.py → TerminalInterface → InteractiveOrchestrator → LLMClient + MCPClient
-                                             ↓                        ↓
-                                    BaseOrchestrator            MessageSystem
-                                    (common logic)           (conversation management)
+interaction.py → TerminalInterface → Instruction + ResourceManager
+                          ↓                ↓              ↓
+                 InteractiveOrchestrator  Commands    LLMClient + MCPClient
+                          ↓                              ↓
+                 BaseOrchestrator                 MessageSystem
+                 (common logic)              (conversation management)
 
 # Original Demo Mode  
-main.py → TaskOrchestrator → LLMClient + MCPClient
-                 ↓                    ↓
-         BaseOrchestrator      MessageSystem
-         (common logic)    (conversation management)
+main.py → ResourceManager → TaskOrchestrator → LLMClient + MCPClient
+               ↓                    ↓                    ↓
+          Client Management   BaseOrchestrator      MessageSystem
+          (resource handling) (common logic)   (conversation management)
 ```
 
 ## Project Implementation
@@ -98,42 +100,54 @@ main.py → TaskOrchestrator → LLMClient + MCPClient
 ### Core Components
 
 1. **TerminalInterface** (`interaction.py`):
-   - Rich terminal UI with command handling
-   - Dynamic model switching and discovery
-   - Task interruption and conversation management
-   - Professional user experience with colored output
+   - Main terminal interface coordinating user interactions
+   - Task execution management with interruption support
+   - Integration with Instruction and ResourceManager classes
+   - Professional user experience with rich terminal UI
 
-2. **BaseOrchestrator** (`src/orchestrator/base_orchestrator.py`):
+2. **Instruction** (`src/instruction.py`):
+   - Handles all command processing and instruction display
+   - Command routing for `/model`, `/clear`, `/quit` commands
+   - Welcome message and help text generation
+   - Clean separation of UI logic from business logic
+
+3. **ResourceManager** (`src/resource_manager.py`):
+   - Centralizes LLM client, MCP client, and orchestrator management
+   - Handles client initialization and connection monitoring
+   - Model switching and conversation history management
+   - MCP connection liveness monitoring and recovery
+
+4. **BaseOrchestrator** (`src/orchestrator/base_orchestrator.py`):
    - Common orchestration logic shared by all orchestrator types
    - Progress evaluation and JSON-based assessment
    - Tool preparation and iteration execution
    - Clean separation of concerns for maintainability
 
-3. **InteractiveOrchestrator** (`src/orchestrator/interactive_orchestrator.py`):
+5. **InteractiveOrchestrator** (`src/orchestrator/interactive_orchestrator.py`):
    - Inherits from BaseOrchestrator with interrupt support
    - Async cancellation handling for responsive UI
    - Progress evaluation with user control
    - Specialized for terminal interaction use cases
 
-4. **TaskOrchestrator** (`src/orchestrator/task_orchestrator.py`):
+6. **TaskOrchestrator** (`src/orchestrator/task_orchestrator.py`):
    - Inherits from BaseOrchestrator for batch processing
    - Simple task execution without interruption
    - Ideal for automated/scripted workflows
    - Minimal overhead for straightforward tasks
 
-5. **LLMClient** (`src/llm_client.py`):
+7. **LLMClient** (`src/llm_client.py`):
    - OpenAI API integration with automatic tool calling
    - Single-cycle tool execution with retry mechanisms
    - Support for multiple OpenAI-compatible APIs
    - Model: `openai/gpt-5-nano` (configurable)
 
-6. **MCPClient** (`src/mcp_client.py`):
+8. **MCPClient** (`src/mcp_client.py`):
    - FastMCP wrapper for MCP server communication
    - Async context manager support
    - Tool discovery and execution capabilities
    - Connects to Playwright MCP server
 
-7. **MessageSystem** (`src/message_system.py`):
+9. **MessageSystem** (`src/message_system.py`):
    - Centralized conversation management
    - OpenAI format conversion
    - Tool call tracking and result management

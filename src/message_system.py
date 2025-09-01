@@ -2,6 +2,7 @@
 Message System for managing OpenAI chat messages with proper formatting.
 """
 
+import re
 from typing import Dict, Any, List, Optional
 from dataclasses import dataclass
 

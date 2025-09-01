@@ -226,7 +226,7 @@ Please start by taking the first necessary action to complete this task.
             print("🛑 Task interrupted by user")
             return {**evaluation, "_interrupted": True}
 
-        self.messages.add_user_message(f"You should make your own decision, but you could use {evaluation['next_step']} as a reference")
+        self.messages.add_user_message(f"You should make your own decision without asking user's help, but you could use {evaluation['next_step']} as a reference")
 
         # Use LLM client with automatic tool calling
         await self.llm_client.prompt_with_auto_tools(

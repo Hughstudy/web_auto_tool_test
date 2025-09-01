@@ -16,18 +16,22 @@ This project demonstrates a clean architecture pattern for building AI agents th
 
 ```
 ┌─────────────────┐    ┌──────────────────┐    ┌─────────────┐
-│ TerminalInterface│    │ BaseOrchestrator │    │ MessageSystem│
-│   (interaction.py)│    │  (common logic)  │    └─────────────┘
-└─────────────────┘    └──────────────────┘           ▲
-         │                       │                   │
-         ▼                       ▼                   │
-┌─────────────────┐    ┌──────────────────┐          │
-│TaskOrchestrator │    │InteractiveOrch. │          │
-│   (main.py)     │    │  (interactive)   │          │
-└─────────────────┘    └──────────────────┘          │
-         │                       │                   │
-         └───────────────────────┼───────────────────┘
-                                 ▼
+│ TerminalInterface│    │   Instruction    │    │ResourceManager│
+│  (interaction.py)│    │ (command handling)│    │(client mgmt) │
+└─────────────────┘    └──────────────────┘    └─────────────┘
+         │                       │                     │
+         ▼                       ▼                     ▼
+┌─────────────────┐    ┌──────────────────┐    ┌─────────────┐
+│BaseOrchestrator │    │InteractiveOrch.  │    │MessageSystem│
+│ (common logic)  │    │  (interactive)   │    │(conversations)│
+└─────────────────┘    └──────────────────┘    └─────────────┘
+         ▲                       │                     ▲
+         │                       ▼                     │
+         │              ┌──────────────────┐           │
+         └──────────────│TaskOrchestrator  │───────────┘
+                        │    (main.py)     │
+                        └──────────────────┘
+                                 │
                     ┌────────────┴────────────┐
                     ▼                         ▼
               ┌───────────┐            ┌─────────────┐
@@ -126,6 +130,8 @@ The demo script executes a predefined complex task:
 ```
 src/
 ├── __init__.py
+├── instruction.py             # Command processing and instruction display
+├── resource_manager.py        # Client management and resource handling
 ├── llm_client.py              # Multi-API LLM integration (OpenAI, Gemini, etc.)
 ├── mcp_client.py              # FastMCP server communication
 ├── message_system.py          # Conversation management and history
@@ -146,13 +152,29 @@ README.md                  # This file
 
 ### TerminalInterface (`interaction.py`)
 
-Sophisticated terminal interface for interactive task orchestration:
+Main terminal interface coordinating user interactions:
 - **Rich UI**: Professional interface with colored output, tables, and progress indicators
-- **Dynamic Model Management**: Lists 320+ available models, switches models on-the-fly
-- **Smart Task Control**: Interrupt running tasks with Ctrl+C, automatic conversation reset
-- **Command System**: `/model`, `/clear`, `/quit` commands with intelligent handling
+- **Task Execution Management**: Handles task interruption and execution flow
+- **Component Integration**: Coordinates Instruction and ResourceManager classes
 - **Error Recovery**: Automatic MCP server reconnection while preserving conversation memory
 - **Graceful Shutdown**: Clean resource cleanup and session management
+
+### Instruction (`src/instruction.py`)
+
+Handles all command processing and instruction display:
+- **Command Processing**: Routes `/model`, `/clear`, `/quit` commands intelligently
+- **Welcome Display**: Generates welcome messages and help text
+- **Model Management UI**: Lists 320+ available models, handles model switching interface
+- **Clean Separation**: Isolates UI logic from business logic for maintainability
+
+### ResourceManager (`src/resource_manager.py`)
+
+Centralizes client management and resource handling:
+- **Client Initialization**: Manages LLM client, MCP client, and orchestrator setup
+- **Connection Monitoring**: Monitors MCP connection health and handles reconnection
+- **Model Switching**: Handles runtime model changes with proper client updates
+- **Memory Preservation**: Maintains conversation history during reconnections
+- **Resource Cleanup**: Ensures proper cleanup of all managed resources
 
 ### BaseOrchestrator (`src/orchestrator/base_orchestrator.py`)
 
